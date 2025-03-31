@@ -1,133 +1,68 @@
-local M = {}
+local abc_srvr = {}
 
-local lspconfig = require('lspconfig')
-local config = require('abc_lsp.config')
-
--- Server state
-local server_running = false
-local server_job_id = nil
-
--- Check if the server is running
-function M.is_running()
-  return server_running
-end
+local abc_cfg = require("abc_lsp.config")
+local abc_cmds = require("abc_lsp.commands")
+abc_srvr.running = false
+abc_srvr.client_id = nil
 
 -- Start the ABC LSP server
-function M.start()
-  local opts = config.options
-  
-  -- Check if the server is already running
-  if server_running then
-    vim.notify('ABC LSP server is already running', vim.log.levels.INFO)
-    return
-  end
-  
-  -- Setup the LSP client configuration
-  local client_config = {
-    cmd = opts.server.cmd,
-    root_dir = function(fname)
-      return lspconfig.util.find_git_ancestor(fname) or vim.fn.getcwd()
-    end,
-    settings = opts.server.settings,
-    capabilities = vim.tbl_deep_extend(
-      'force',
-      vim.lsp.protocol.make_client_capabilities(),
-      require('cmp_nvim_lsp').default_capabilities(),
-      opts.server.capabilities or {}
-    ),
-    on_attach = function(client, bufnr)
-      M.on_attach(client, bufnr)
-    end,
-    flags = {
-      debounce_text_changes = 150,
-    },
-  }
-  
-  -- Register the LSP client
-  lspconfig.abc_lsp = {
-    default_config = client_config,
-  }
-  
-  -- Start the server
-  lspconfig.abc_lsp.setup({})
-  
-  server_running = true
-  vim.notify('ABC LSP server started', vim.log.levels.INFO)
+function abc_srvr.start()
+	local opts = abc_cfg.options
+
+	if abc_srvr.server_running then
+		return
+	end
+
+	abc_srvr.client_id = vim.lsp.start_client({
+		name = "abc-lsp",
+		cmd = opts.server.cmd,
+		capabilities = vim.tbl_deep_extend(
+			"force",
+			vim.lsp.protocol.make_client_capabilities(),
+			require("cmp_nvim_lsp").default_capabilities(),
+			opts.server.capabilities or {}
+		),
+		commands = {
+			{ "divide_rhythm", abc_cmds.divide_rhythm },
+			{ "multiply_rhythm", abc_cmds.multiply_rhythm },
+			{ "transpose_up", abc_cmds.transpose_up },
+			{ "transpose_down", abc_cmds.transpose_down },
+		},
+	})
+	-- Setup the LSP client configuration
+	abc_srvr.server_running = true
+	vim.notify("ABC LSP server started", vim.log.levels.INFO)
 end
 
 -- Stop the ABC LSP server
-function M.stop()
-  if not server_running then
-    vim.notify('ABC LSP server is not running', vim.log.levels.INFO)
-    return
-  end
-  
-  -- Stop all ABC LSP clients
-  for _, client in pairs(vim.lsp.get_active_clients()) do
-    if client.name == 'abc_lsp' then
-      client.stop()
-    end
-  end
-  
-  server_running = false
-  vim.notify('ABC LSP server stopped', vim.log.levels.INFO)
+function abc_srvr.stop()
+	vim.lsp.get_client_by_id(abc_srvr.client_id).stop()
+
+	abc_srvr.server_running = false
+	vim.notify("ABC LSP server stopped", vim.log.levels.INFO)
 end
 
 -- Restart the ABC LSP server
-function M.restart()
-  M.stop()
-  vim.defer_fn(function()
-    M.start()
-  end, 1000) -- Wait a second before restarting
+function abc_srvr.restart()
+	abc_srvr.stop()
+	vim.defer_fn(function()
+		abc_srvr.start()
+	end, 500)
 end
 
--- Attach the LSP client to a buffer
-function M.attach_to_buffer(bufnr)
-  bufnr = bufnr or 0
-  
-  -- Check if the server is running
-  if not server_running then
-    vim.notify('ABC LSP server is not running. Starting...', vim.log.levels.INFO)
-    M.start()
-  end
-  
-  -- Check if the buffer is already attached
-  local attached = false
-  for _, client in pairs(vim.lsp.get_active_clients({ bufnr = bufnr })) do
-    if client.name == 'abc_lsp' then
-      attached = true
-      break
-    end
-  end
-  
-  if not attached then
-    -- Attach the buffer to the LSP client
-    vim.lsp.buf_attach_client(bufnr, 'abc_lsp')
-  end
+---@param bufnr number
+function abc_srvr.attach_to_buffer(bufnr)
+	bufnr = bufnr
+
+	abc_srvr.start()
+
+	local client_ls = vim.lsp.get_clients({ id = abc_srvr.client_id, bufnr = bufnr })
+
+	if #client_ls < 1 then
+		-- Attach the buffer to the LSP client
+		vim.lsp.buf_attach_client(bufnr, abc_srvr.client_id)
+	end
 end
 
 -- LSP on_attach callback
-function M.on_attach(client, bufnr)
-  local opts = config.options
-  
-  -- Enable completion
-  vim.api.nvim_buf_set_option(bufnr, 'omnifunc', 'v:lua.vim.lsp.omnifunc')
-  
-  -- Setup buffer-local keymaps
-  local function buf_set_keymap(mode, lhs, rhs, opts)
-    opts = opts or {}
-    opts.buffer = bufnr
-    vim.keymap.set(mode, lhs, rhs, opts)
-  end
-  
-  -- Standard LSP keymaps
-  buf_set_keymap('n', 'gd', vim.lsp.buf.definition, { desc = 'Go to definition' })
-  buf_set_keymap('n', 'gr', vim.lsp.buf.references, { desc = 'Find references' })
-  buf_set_keymap('n', 'K', vim.lsp.buf.hover, { desc = 'Show hover information' })
-  buf_set_keymap('n', '<leader>f', vim.lsp.buf.formatting, { desc = 'Format document' })
-  
-  -- Register custom commands for this buffer
-  require('abc_lsp.commands').register_buffer_commands(bufnr)
-end
-
-return M
+return abc_srvr
