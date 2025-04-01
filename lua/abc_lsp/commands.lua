@@ -1,29 +1,16 @@
 local abc_cmds = {}
 local config = require("abc_lsp.config")
 
--- Register buffer-specific commands
-function abc_cmds.register_buffer_commands(bufnr)
-	local opts = config.options
+-- Helper function to apply text edits
+local function apply_text_edits(text_edits, bufnr)
+	if not text_edits or #text_edits == 0 then
+		return
+	end
 
-	-- Create buffer-local commands
-	vim.api.nvim_buf_create_user_command(bufnr, "AbcDivideRhythm", function(opts)
-		abc_cmds.divide_rhythm(opts)
-	end, { desc = "Divide rhythm in selection", range = true })
-
-	vim.api.nvim_buf_create_user_command(bufnr, "AbcMultiplyRhythm", function(opts)
-		abc_cmds.multiply_rhythm(opts)
-	end, { desc = "Multiply rhythm in selection", range = true })
-
-	vim.api.nvim_buf_create_user_command(bufnr, "AbcTransposeUp", function(opts)
-		abc_cmds.transpose_up(opts)
-	end, { desc = "Transpose selection up an octave", range = true })
-
-	vim.api.nvim_buf_create_user_command(bufnr, "AbcTransposeDown", function(opts)
-		abc_cmds.transpose_down(opts)
-	end, { desc = "Transpose selection down an octave", range = true })
+	bufnr = bufnr or vim.api.nvim_get_current_buf()
+	vim.lsp.util.apply_text_edits(text_edits, bufnr, "utf-8")
 end
 
--- Helper function to get the current selection
 local function get_selection()
 	local start_pos = vim.fn.getpos("'<")
 	local end_pos = vim.fn.getpos("'>")
@@ -61,18 +48,8 @@ local function get_selection()
 	end
 end
 
--- Helper function to apply text edits
-local function apply_text_edits(text_edits, bufnr)
-	if not text_edits or #text_edits == 0 then
-		return
-	end
-
-	bufnr = bufnr or vim.api.nvim_get_current_buf()
-	vim.lsp.util.apply_text_edits(text_edits, bufnr, "utf-8")
-end
-
 -- Helper function to execute an ABC LSP command with range support
-local function execute_abc_command(opts, method, error_msg, success_msg)
+local function execute_abc_command(method, error_msg, success_msg)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local abc_srvr = require("abc_lsp.server")
 	local client = vim.lsp.get_client_by_id(abc_srvr.client_id)
@@ -108,24 +85,23 @@ local function execute_abc_command(opts, method, error_msg, success_msg)
 	end, bufnr)
 end
 
--- Divide rhythm in selection
-function abc_cmds.divide_rhythm(opts)
-	execute_abc_command(opts, "divideRhythm", "Error dividing rhythm: ", "Rhythm divided successfully")
-end
+-- Register buffer-specific commands
+function abc_cmds.register_buffer_commands(bufnr)
+	-- Create buffer-local commands
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcDivideRhythm", function()
+		execute_abc_command("divideRhythm", "Error dividing rhythm: ", "Rhythm divided successfully")
+	end, { desc = "Divide rhythm in selection", range = true })
 
--- Multiply rhythm in selection
-function abc_cmds.multiply_rhythm(opts)
-	execute_abc_command(opts, "multiplyRhythm", "Error multiplying rhythm: ", "Rhythm multiplied successfully")
-end
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcMultiplyRhythm", function()
+		execute_abc_command("multiplyRhythm", "Error multiplying rhythm: ", "Rhythm multiplied successfully")
+	end, { desc = "Multiply rhythm in selection", range = true })
 
--- Transpose Function to transpose up
-function abc_cmds.transpose_up(opts)
-	execute_abc_command(opts, "transposeUp", "Error transposing up: ", "Transposed up successfully")
-end
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcTransposeUp", function()
+		execute_abc_command("transposeUp", "Error transposing up: ", "Transposed up successfully")
+	end, { desc = "Transpose selection up an octave", range = true })
 
--- Function to transpose down
-function abc_cmds.transpose_down(opts)
-	execute_abc_command(opts, "transposeDn", "Error transposing down: ", "Transposed down successfully")
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcTransposeDown", function()
+		execute_abc_command("transposeDn", "Error transposing down: ", "Transposed down successfully")
+	end, { desc = "Transpose selection down an octave", range = true })
 end
-
 return abc_cmds
