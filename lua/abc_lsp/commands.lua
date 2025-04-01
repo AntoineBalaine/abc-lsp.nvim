@@ -20,7 +20,7 @@ local function get_selection()
 		-- Visual selection exists, use it
 		return {
 			start = { line = start_pos[2] - 1, character = start_pos[3] - 1 },
-			["end"] = { line = end_pos[2] - 1, character = end_pos[3] - 1 },
+			["end"] = { line = end_pos[2] - 1, character = end_pos[3] },
 			-- For LSP compatibility
 			active = { line = end_pos[2] - 1, character = end_pos[3] - 1 },
 			anchor = { line = start_pos[2] - 1, character = start_pos[3] - 1 },
