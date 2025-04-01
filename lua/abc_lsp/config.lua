@@ -5,7 +5,11 @@ abc_cfg.defaults = {
 	-- Server configuration
 	server = {
 		-- Path to the ABC LSP server executable
-		cmd = { "node", vim.fn.expand("../../../abc-lsp-server/out/server.js") },
+		cmd = {
+			"node",
+			"/Users/antoine/Documents/personnel/experiments/abc/AbcLsp/abc-lsp-server/out/server.js",
+			"--stdio",
+		},
 		-- Server settings
 		settings = {},
 		-- Additional server capabilities
