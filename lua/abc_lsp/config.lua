@@ -4,12 +4,8 @@ local abc_cfg = {}
 abc_cfg.defaults = {
 	-- Server configuration
 	server = {
-		-- Path to the ABC LSP server executable
-		cmd = {
-			"node",
-			"/Users/antoine/Documents/personnel/experiments/abc/AbcLsp/abc-lsp-server/out/server.js",
-			"--stdio",
-		},
+		-- Path to the ABC LSP server executable (must be provided by user)
+		cmd = nil,
 		-- Server settings
 		settings = {},
 		-- Additional server capabilities

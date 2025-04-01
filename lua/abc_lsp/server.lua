@@ -17,6 +17,18 @@ function abc_srvr.start()
 		-- return
 	end
 
+	-- Check if LSP path is provided
+	if not opts.lsp_path then
+		vim.notify("ABC language server path not provided. Please set path in your configuration.", vim.log.levels.ERROR)
+		return
+	end
+
+	opts.server.cmd = {
+		"node",
+		opts.lsp_path,
+		"--stdio",
+	}
+
 	-- Build capabilities
 	local capabilities = vim.lsp.protocol.make_client_capabilities()
 
