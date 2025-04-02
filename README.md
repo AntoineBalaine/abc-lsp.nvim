@@ -2,6 +2,14 @@
 
 A Neovim plugin for ABC music notation that provides language server features.
 
+## Live preview in browser
+
+<img src="assets/abc_ide.gif" alt="abc music notation score preview" width="70%" >
+
+## Score formatting
+
+<img src="assets/abc_ide_fmt.gif" alt="abc music notation formatting" width="50%" >
+
 ## Features
 
 - Syntax highlighting for ABC notation
