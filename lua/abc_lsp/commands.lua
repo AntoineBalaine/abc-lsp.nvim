@@ -1,9 +1,6 @@
 ---@class AbcCommands
 local abc_cmds = {}
 
----@type AbcConfig
-local config = require("abc_lsp.config")
-
 --- Helper function to apply text edits
 ---@param text_edits table[] Array of text edits
 ---@param bufnr number|nil Buffer number

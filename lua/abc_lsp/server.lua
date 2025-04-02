@@ -27,7 +27,10 @@ function abc_srvr.start()
 
 	-- Check if LSP path is provided
 	if not opts.lsp_path then
-		vim.notify("ABC language server path not provided. Please set path in your configuration.", vim.log.levels.ERROR)
+		vim.notify(
+			"ABC language server path not provided. Please set path in your configuration.",
+			vim.log.levels.ERROR
+		)
 		return
 	end
 
