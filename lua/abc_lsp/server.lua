@@ -1,15 +1,23 @@
+---@class AbcServer
 local abc_srvr = {}
 
+---@type AbcConfig
 local abc_cfg = require("abc_lsp.config")
+---@type AbcCommands
 local abc_cmds = require("abc_lsp.commands")
-abc_srvr.running = false
+
+---@type boolean
+abc_srvr.server_running = false
+---@type number|nil
 abc_srvr.client_id = nil
 
+--- Get the client ID
+---@return number|nil Client ID
 function abc_srvr.get_client_id()
 	return abc_srvr.client_id
 end
 
--- Start the ABC LSP server
+--- Start the ABC LSP server
 function abc_srvr.start()
 	local opts = abc_cfg.options
 
@@ -93,7 +101,7 @@ function abc_srvr.start()
 	end
 end
 
--- Stop the ABC LSP server
+--- Stop the ABC LSP server
 function abc_srvr.stop()
 	vim.lsp.get_client_by_id(abc_srvr.client_id).stop()
 
@@ -101,7 +109,7 @@ function abc_srvr.stop()
 	vim.notify("ABC LSP server stopped", vim.log.levels.INFO)
 end
 
--- Restart the ABC LSP server
+--- Restart the ABC LSP server
 function abc_srvr.restart()
 	abc_srvr.stop()
 	vim.defer_fn(function()
@@ -109,7 +117,8 @@ function abc_srvr.restart()
 	end, 500)
 end
 
----@param bufnr number
+--- Attach to a buffer
+---@param bufnr number Buffer number
 function abc_srvr.attach_to_buffer(bufnr)
 	bufnr = bufnr
 
@@ -123,6 +132,8 @@ function abc_srvr.attach_to_buffer(bufnr)
 	end
 end
 
+--- Check if the server is running
+---@return boolean Whether the server is running
 function abc_srvr.is_running()
 	return abc_srvr.server_running == true
 end

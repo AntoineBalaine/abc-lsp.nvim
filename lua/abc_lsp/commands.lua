@@ -1,7 +1,12 @@
+---@class AbcCommands
 local abc_cmds = {}
+
+---@type AbcConfig
 local config = require("abc_lsp.config")
 
--- Helper function to apply text edits
+--- Helper function to apply text edits
+---@param text_edits table[] Array of text edits
+---@param bufnr number|nil Buffer number
 local function apply_text_edits(text_edits, bufnr)
 	if not text_edits or #text_edits == 0 then
 		return
@@ -11,6 +16,8 @@ local function apply_text_edits(text_edits, bufnr)
 	vim.lsp.util.apply_text_edits(text_edits, bufnr, "utf-8")
 end
 
+--- Get the current selection or cursor position
+---@return table Selection object with start, end, active, and anchor positions
 local function get_selection()
 	local start_pos = vim.fn.getpos("'<")
 	local end_pos = vim.fn.getpos("'>")
@@ -48,7 +55,10 @@ local function get_selection()
 	end
 end
 
--- Helper function to execute an ABC LSP command with range support
+--- Helper function to execute an ABC LSP command with range support
+---@param method string LSP method name
+---@param error_msg string Error message prefix
+---@param success_msg string Success message
 local function execute_abc_command(method, error_msg, success_msg)
 	local bufnr = vim.api.nvim_get_current_buf()
 	local abc_srvr = require("abc_lsp.server")
@@ -85,7 +95,8 @@ local function execute_abc_command(method, error_msg, success_msg)
 	end, bufnr)
 end
 
--- Register buffer-specific commands
+--- Register buffer-specific commands
+---@param bufnr number Buffer number
 function abc_cmds.register_buffer_commands(bufnr)
 	-- Create buffer-local commands
 	vim.api.nvim_buf_create_user_command(bufnr, "AbcDivideRhythm", function()
@@ -103,5 +114,23 @@ function abc_cmds.register_buffer_commands(bufnr)
 	vim.api.nvim_buf_create_user_command(bufnr, "AbcTransposeDown", function()
 		execute_abc_command("transposeDn", "Error transposing down: ", "Transposed down successfully")
 	end, { desc = "Transpose selection down an octave", range = true })
+
+	-- Preview and export commands
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcPreview", function()
+		require("abc_lsp.preview").open_preview()
+	end, { desc = "Open ABC preview in browser" })
+
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcExportHtml", function()
+		require("abc_lsp.export").export_html()
+	end, { desc = "Export ABC as HTML" })
+
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcExportSvg", function()
+		require("abc_lsp.export").export_svg()
+	end, { desc = "Export ABC as SVG" })
+
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcPrintPreview", function()
+		require("abc_lsp.export").print_preview()
+	end, { desc = "Open ABC print preview" })
 end
+
 return abc_cmds

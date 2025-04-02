@@ -1,12 +1,21 @@
+---@class AbcPreview
 local M = {}
-local Job = require('plenary.job')
+
+---@type AbcConfig
 local config = require('abc_lsp.config')
 
 -- Store server job ID
+---@type number|nil
 M.server_job_id = nil
+---@type number
 M.server_port = 8088
 
--- Start the preview server
+--- Callback for processing stdout from the server
+---@type function|nil
+M.stdout_callback = nil
+
+--- Start the preview server
+---@return number|nil Port number if server started successfully, nil otherwise
 function M.start_server()
   if M.server_job_id then
     -- Server already running
@@ -15,7 +24,7 @@ function M.start_server()
 
   -- Get server path
   local plugin_path = vim.fn.fnamemodify(vim.fn.resolve(vim.fn.expand('<sfile>:p')), ':h:h:h:h')
-  local server_path = plugin_path .. '/preview-server/server.js'
+  local server_path = plugin_path .. '/preview-server/dist/server.js'
 
   -- Start server as background job
   M.server_job_id = vim.fn.jobstart('node ' .. server_path .. ' --port=' .. M.server_port, {
@@ -30,6 +39,11 @@ function M.start_server()
             end
           end
         end
+      end
+
+      -- Call the custom stdout callback if set
+      if M.stdout_callback then
+        M.stdout_callback(data)
       end
     end,
     on_stderr = function(_, data)
@@ -57,7 +71,7 @@ function M.start_server()
   return M.server_port
 end
 
--- Stop the preview server
+--- Stop the preview server
 function M.stop_server()
   if M.server_job_id then
     vim.fn.jobstop(M.server_job_id)
@@ -65,7 +79,9 @@ function M.stop_server()
   end
 end
 
--- Send content to the server
+--- Send content to the server
+---@param content string ABC notation content
+---@return boolean Success status
 function M.send_content(content)
   if not M.server_job_id then
     return false
@@ -80,7 +96,9 @@ function M.send_content(content)
   return true
 end
 
--- Send configuration to the server
+--- Send configuration to the server
+---@param config_options table Configuration options
+---@return boolean Success status
 function M.send_config(config_options)
   if not M.server_job_id then
     return false
@@ -95,7 +113,8 @@ function M.send_config(config_options)
   return true
 end
 
--- Handle click events from the preview
+--- Handle click events from the preview
+---@param message table Message with startChar and endChar
 function M.handle_click(message)
   local bufnr = vim.api.nvim_get_current_buf()
   local start_pos = vim.api.nvim_buf_get_offset(bufnr, 0) + message.startChar
@@ -113,7 +132,10 @@ function M.handle_click(message)
   vim.api.nvim_win_set_cursor(0, { end_line + 1, end_col })
 end
 
--- Convert byte position to line/column
+--- Convert byte position to line/column
+---@param bufnr number Buffer number
+---@param byte_pos number Byte position
+---@return number, number Line and column
 function M.byte_to_pos(bufnr, byte_pos)
   local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
   local current_pos = 0
@@ -130,7 +152,7 @@ function M.byte_to_pos(bufnr, byte_pos)
   return #lines - 1, #lines[#lines]
 end
 
--- Open preview in browser
+--- Open preview in browser
 function M.open_preview()
   -- Start server if not running
   local port = M.start_server()
@@ -168,7 +190,7 @@ function M.open_preview()
   end
 end
 
--- Update preview with current buffer content
+--- Update preview with current buffer content
 function M.update_preview()
   local bufnr = vim.api.nvim_get_current_buf()
   local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), '\n')
@@ -176,7 +198,7 @@ function M.update_preview()
   M.send_content(content)
 end
 
--- Set up autocommands for live preview
+--- Set up autocommands for live preview
 function M.setup_autocommands()
   local augroup = vim.api.nvim_create_augroup('AbcPreview', { clear = true })
 

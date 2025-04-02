@@ -1,8 +1,52 @@
+---@class AbcExport
 local M = {}
+
+---@type AbcPreview
 local preview = require('abc_lsp.preview')
+---@type AbcConfig
 local config = require('abc_lsp.config')
 
--- Export as HTML
+--- Handler for export completion messages
+---@param message table Message with export status
+local function handle_export_completion(message)
+  if message.type == 'exportComplete' then
+    vim.notify('Export completed: ' .. message.path, vim.log.levels.INFO)
+  elseif message.type == 'exportError' then
+    vim.notify('Export error: ' .. message.error, vim.log.levels.ERROR)
+  end
+end
+
+--- Set up the export completion handler
+local function setup_export_handler()
+  -- Only set up once
+  if M.export_handler_setup then
+    return
+  end
+
+  -- Add handler to preview stdout callback
+  local original_stdout = preview.stdout_callback
+  preview.stdout_callback = function(data)
+    if original_stdout then
+      original_stdout(data)
+    end
+
+    -- Process export messages
+    if data and #data > 0 then
+      for _, line in ipairs(data) do
+        if line and line ~= '' then
+          local success, message = pcall(vim.fn.json_decode, line)
+          if success and (message.type == 'exportComplete' or message.type == 'exportError') then
+            handle_export_completion(message)
+          end
+        end
+      end
+    end
+  end
+
+  M.export_handler_setup = true
+end
+
+--- Export as HTML
 function M.export_html()
   -- Ensure server is running
   if not preview.server_job_id then
@@ -12,6 +56,9 @@ function M.export_html()
       return
     end
   end
+
+  -- Set up export handler if not already done
+  setup_export_handler()
 
   -- Get current buffer content
   local bufnr = vim.api.nvim_get_current_buf()
@@ -24,7 +71,7 @@ function M.export_html()
   local file_path = vim.fn.expand('%:p')
   local export_path = file_path .. '.html'
 
-  -- Request SVG from server
+  -- Request export
   local message = vim.fn.json_encode({
     type = 'requestExport',
     format = 'html',
@@ -32,11 +79,10 @@ function M.export_html()
   })
 
   vim.fn.chansend(preview.server_job_id, message .. '\n')
-
   vim.notify('Exporting HTML to ' .. export_path, vim.log.levels.INFO)
 end
 
--- Export as SVG
+--- Export as SVG
 function M.export_svg()
   -- Ensure server is running
   if not preview.server_job_id then
@@ -46,6 +92,9 @@ function M.export_svg()
       return
     end
   end
+
+  -- Set up export handler if not already done
+  setup_export_handler()
 
   -- Get current buffer content
   local bufnr = vim.api.nvim_get_current_buf()
@@ -58,7 +107,7 @@ function M.export_svg()
   local file_path = vim.fn.expand('%:p')
   local export_path = file_path .. '.svg'
 
-  -- Request SVG from server
+  -- Request export
   local message = vim.fn.json_encode({
     type = 'requestExport',
     format = 'svg',
@@ -66,11 +115,10 @@ function M.export_svg()
   })
 
   vim.fn.chansend(preview.server_job_id, message .. '\n')
-
   vim.notify('Exporting SVG to ' .. export_path, vim.log.levels.INFO)
 end
 
--- Open print preview
+--- Open print preview
 function M.print_preview()
   -- Ensure server is running
   if not preview.server_job_id then
