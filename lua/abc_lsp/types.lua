@@ -49,6 +49,16 @@
 ---@field export_svg function Export as SVG
 ---@field print_preview function Open print preview
 
+---@class AbcInstall
+---@field check_node function Check if Node.js is installed
+---@field check_npm function Check if npm is installed
+---@field get_plugin_root function Get the plugin root directory
+---@field check_dependencies function Check if dependencies are installed
+---@field install_dependencies function Install dependencies
+---@field build_typescript function Build the TypeScript code
+---@field run function Run the full installation process
+---@field install function Expose a function for plugin managers to call
+
 ---@class AbcCommands
 ---@field register_buffer_commands function Register buffer-specific commands
 

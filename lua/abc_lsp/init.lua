@@ -7,6 +7,8 @@ local abc_cfg = require("abc_lsp.config")
 local abc_srvr = require("abc_lsp.server")
 ---@type AbcPreview
 local abc_preview = require("abc_lsp.preview")
+---@type AbcInstall
+local abc_install = require("abc_lsp.install")
 
 --- Setup function to initialize the plugin
 ---@param opts table|nil Configuration options
@@ -18,6 +20,9 @@ function M.setup(opts)
 
 	-- Store the configuration
 	abc_cfg.options = opts
+
+	-- Check and install dependencies if needed
+	abc_install.run()
 
 	-- abc_srvr.start()
 

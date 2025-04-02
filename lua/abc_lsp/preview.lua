@@ -22,9 +22,44 @@ function M.start_server()
 		return M.server_port
 	end
 
-	-- Get server path
-	local plugin_path = vim.fn.fnamemodify(vim.fn.resolve(vim.fn.expand("<sfile>:p")), ":h:h:h:h")
-	local server_path = plugin_path .. "/preview-server/dist/server.js"
+	-- Try to find the server path
+	local server_path
+
+	-- First try: Use debug.getinfo to find the plugin path
+	local source = debug.getinfo(1, "S").source:sub(2)      -- Remove the '@' prefix
+	local plugin_path = vim.fn.fnamemodify(source, ":h:h:h") -- Go up 3 levels from lua/abc_lsp/preview.lua
+	local primary_path = plugin_path .. "/preview-server/dist/server.js"
+
+	-- Debug output
+	print("Plugin path: " .. plugin_path)
+	print("Primary server path: " .. primary_path)
+
+	if vim.fn.filereadable(primary_path) == 1 then
+		server_path = primary_path
+	else
+		-- Second try: Check common plugin installation paths
+		local fallback_paths = {
+			vim.fn.stdpath("data") .. "/site/pack/*/start/abc-lsp.nvim/preview-server/dist/server.js",
+			vim.fn.stdpath("data") .. "/site/pack/*/opt/abc-lsp.nvim/preview-server/dist/server.js",
+			vim.fn.stdpath("config") .. "/plugged/abc-lsp.nvim/preview-server/dist/server.js", -- vim-plug
+			vim.fn.stdpath("config") .. "/pack/*/start/abc-lsp.nvim/preview-server/dist/server.js",
+		}
+
+		for _, path_pattern in ipairs(fallback_paths) do
+			local expanded_paths = vim.fn.glob(path_pattern, false, true)
+			if #expanded_paths > 0 then
+				server_path = expanded_paths[1]
+				print("Found server at fallback path: " .. server_path)
+				break
+			end
+		end
+	end
+
+	-- Check if we found a valid server path
+	if not server_path or vim.fn.filereadable(server_path) == 0 then
+		vim.notify("ABC Preview Server not found. Please check installation.", vim.log.levels.ERROR)
+		return nil
+	end
 
 	-- Start server as background job
 	M.server_job_id = vim.fn.jobstart("node " .. server_path .. " --port=" .. M.server_port, {
