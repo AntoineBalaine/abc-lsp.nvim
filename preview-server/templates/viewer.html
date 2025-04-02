@@ -57,6 +57,12 @@
             padding: 10px;
             margin-top: 10px;
         }
+
+        /* Highlight style for notes */
+        .abcjs-note.highlight, .abcjs-rest.highlight {
+            fill: #ff6600 !important;
+            stroke: #ff6600 !important;
+        }
     </style>
 </head>
 <body>
@@ -73,11 +79,14 @@
     <script>
         let ws;
         let abc = '';
+        let currentTune = null;
         
         const options = {
             startingTune: 0,
             clickListener: clickListener,
             responsive: "resize",
+            add_classes: true,
+            selectionColor: "#ff6600",
             format: {
                 gchordfont: '"itim-music,Itim" 20'
             },
@@ -109,6 +118,9 @@
                 } else if (message.type === 'requestSvg') {
                     // Server is requesting SVG for export
                     requestSvg();
+                } else if (message.type === 'cursorMove') {
+                    // Handle cursor movement from Neovim
+                    highlightElementAtPosition(message.position);
                 }
             };
             
@@ -131,7 +143,8 @@
          * Run abcjs, render the score from ABC notation.
          */
         function drawTune(abcCode) {
-            ABCJS.renderAbc('paper', abcCode, options);
+            // Store the tune object for later use
+            currentTune = ABCJS.renderAbc('paper', abcCode, options)[0];
 
             const showSource = options.showTransposedSource;
             const source = document.getElementById("source");
@@ -151,6 +164,16 @@
             } else {
                 source.classList.remove("show");
             }
+        }
+
+        /**
+         * Highlight the element at the given character position
+         */
+        function highlightElementAtPosition(position) {
+            if (!currentTune || !currentTune.engraver) return;
+            
+            // Use the built-in rangeHighlight method to highlight the element
+            currentTune.engraver.rangeHighlight(position, position + 1);
         }
 
         function setTune() {

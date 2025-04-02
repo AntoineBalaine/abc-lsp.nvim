@@ -39,4 +39,9 @@ export interface ExportError {
   error: string;
 }
 
-export type ServerMessage = ClickEvent | ContentMessage | ConfigMessage | ExportComplete | ExportError;
+export interface CursorMoveMessage {
+  type: "cursorMove";
+  position: number;
+}
+
+export type ServerMessage = ClickEvent | ContentMessage | ConfigMessage | ExportComplete | ExportError | CursorMoveMessage;

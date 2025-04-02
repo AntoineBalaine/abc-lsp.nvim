@@ -233,6 +233,30 @@ function M.update_preview()
 	M.send_content(content)
 end
 
+--- Send cursor position to the server
+---@return boolean Success status
+function M.send_cursor_position()
+	if not M.server_job_id then
+		return false
+	end
+
+	local bufnr = vim.api.nvim_get_current_buf()
+	local cursor = vim.api.nvim_win_get_cursor(0) -- Returns {row, col}
+	local line = cursor[1] - 1                   -- Convert to 0-indexed
+	local col = cursor[2]
+
+	-- Calculate character position
+	local char_pos = vim.api.nvim_buf_get_offset(bufnr, line) + col
+
+	local message = vim.fn.json_encode({
+		type = "cursorMove",
+		position = char_pos
+	})
+
+	vim.fn.chansend(M.server_job_id, message .. "\n")
+	return true
+end
+
 --- Set up autocommands for live preview
 function M.setup_autocommands()
 	local augroup = vim.api.nvim_create_augroup("AbcPreview", { clear = true })
@@ -243,6 +267,21 @@ function M.setup_autocommands()
 		pattern = "*.abc",
 		callback = function()
 			M.update_preview()
+		end,
+	})
+
+	-- Track cursor movement
+	vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
+		group = augroup,
+		pattern = "*.abc",
+		callback = function()
+			-- Debounce to avoid too many updates
+			if M.cursor_timer then
+				vim.fn.timer_stop(M.cursor_timer)
+			end
+			M.cursor_timer = vim.fn.timer_start(100, function()
+				M.send_cursor_position()
+			end)
 		end,
 	})
 

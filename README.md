@@ -10,6 +10,7 @@ A Neovim plugin for ABC music notation that provides language server features.
 - Completions for ABC notation symbols
 - Custom commands for rhythm transformation and transposition
 - Live preview of ABC notation in a browser
+- Interactive cursor-based note highlighting in preview
 - Export to HTML and SVG formats
 
 ## Requirements
@@ -118,6 +119,19 @@ require('abc_lsp').setup({
   highlighting = {
     -- Enable semantic token highlighting
     enable = true,
+  },
+  
+  -- Preview configuration
+  preview = {
+    -- Auto-open preview when opening an ABC file
+    auto_open = false,
+    -- Port for the preview server
+    port = 8088,
+    -- Rendering options passed to abcjs
+    options = {
+      responsive = true,
+      selectionColor = "#ff6600", -- Color for cursor highlighting
+    },
   },
   
   -- Keymaps for ABC-specific commands

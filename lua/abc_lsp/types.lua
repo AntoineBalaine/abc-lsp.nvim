@@ -34,10 +34,13 @@
 ---@class AbcPreview
 ---@field server_job_id number|nil Server job ID
 ---@field server_port number Server port
+---@field stdout_callback function|nil Callback for processing stdout from the server
+---@field cursor_timer number|nil Timer for debouncing cursor movement
 ---@field start_server function Start the preview server
 ---@field stop_server function Stop the preview server
 ---@field send_content function Send content to the server
 ---@field send_config function Send configuration to the server
+---@field send_cursor_position function Send cursor position to the server
 ---@field handle_click function Handle click events from the preview
 ---@field byte_to_pos function Convert byte position to line/column
 ---@field open_preview function Open preview in browser
