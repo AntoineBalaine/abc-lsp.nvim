@@ -51,9 +51,16 @@ function M.create_autocommands()
 			-- Attach the LSP client to the buffer
 			abc_srvr.attach_to_buffer(0)
 
-			-- Auto-open preview if configured
+			-- Handle preview on buffer enter
+			local bufnr = vim.api.nvim_get_current_buf()
+			local buf_info = abc_preview.previewed_buffers[bufnr]
+
 			if abc_cfg.options.preview and abc_cfg.options.preview.auto_open then
+				-- Auto-open preview if configured (won't re-open browser if already opened)
 				abc_preview.open_preview()
+			elseif buf_info then
+				-- If preview was manually opened before, update content without opening browser
+				abc_preview.update_preview()
 			end
 		end,
 	})

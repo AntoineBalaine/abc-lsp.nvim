@@ -58,16 +58,21 @@ function M.export_html()
 	-- Set up export handler if not already done
 	setup_export_handler()
 
-	-- Get current buffer content
+	-- Get current buffer content and path
 	local bufnr = vim.api.nvim_get_current_buf()
 	local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+	local file_path = vim.api.nvim_buf_get_name(bufnr)
+
+	-- Handle unnamed buffers
+	if file_path == "" then
+		file_path = "[No Name]"
+	end
 
 	-- Send content to server
-	preview.send_content(content)
+	preview.send_content(file_path, content)
 
-	-- Get current file path
-	local file_path = vim.fn.expand("%:p")
-	local export_path = file_path .. ".html"
+	-- Get export path
+	local export_path = vim.fn.expand("%:p") .. ".html"
 
 	-- Request export
 	local message = vim.fn.json_encode({
@@ -94,16 +99,21 @@ function M.export_svg()
 	-- Set up export handler if not already done
 	setup_export_handler()
 
-	-- Get current buffer content
+	-- Get current buffer content and path
 	local bufnr = vim.api.nvim_get_current_buf()
 	local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+	local file_path = vim.api.nvim_buf_get_name(bufnr)
+
+	-- Handle unnamed buffers
+	if file_path == "" then
+		file_path = "[No Name]"
+	end
 
 	-- Send content to server
-	preview.send_content(content)
+	preview.send_content(file_path, content)
 
-	-- Get current file path
-	local file_path = vim.fn.expand("%:p")
-	local export_path = file_path .. ".svg"
+	-- Get export path
+	local export_path = vim.fn.expand("%:p") .. ".svg"
 
 	-- Request export
 	local message = vim.fn.json_encode({
@@ -127,12 +137,18 @@ function M.print_preview()
 		end
 	end
 
-	-- Get current buffer content
+	-- Get current buffer content and path
 	local bufnr = vim.api.nvim_get_current_buf()
 	local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+	local file_path = vim.api.nvim_buf_get_name(bufnr)
+
+	-- Handle unnamed buffers
+	if file_path == "" then
+		file_path = "[No Name]"
+	end
 
 	-- Send content to server
-	preview.send_content(content)
+	preview.send_content(file_path, content)
 
 	-- Open print preview URL
 	local url = "http://localhost:" .. preview.server_port .. "/print"

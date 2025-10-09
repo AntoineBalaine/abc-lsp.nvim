@@ -13,6 +13,7 @@ export interface ClickEvent {
 
 export interface ContentMessage {
   type: "content";
+  path: string;
   content: string;
 }
 
@@ -44,4 +45,14 @@ export interface CursorMoveMessage {
   position: number;
 }
 
-export type ServerMessage = ClickEvent | ContentMessage | ConfigMessage | ExportComplete | ExportError | CursorMoveMessage;
+export interface CleanupMessage {
+  type: "cleanup";
+  path: string;
+}
+
+export interface ServerInfoMessage {
+  type: "serverInfo";
+  port: number;
+}
+
+export type ServerMessage = ClickEvent | ContentMessage | ConfigMessage | ExportComplete | ExportError | CursorMoveMessage | CleanupMessage | ServerInfoMessage;

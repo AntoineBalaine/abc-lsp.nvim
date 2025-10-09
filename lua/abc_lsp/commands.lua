@@ -117,6 +117,25 @@ function abc_cmds.register_buffer_commands(bufnr)
 		require("abc_lsp.preview").open_preview()
 	end, { desc = "Open ABC preview in browser" })
 
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcPreviewUrl", function()
+		local preview = require("abc_lsp.preview")
+		local url = preview.get_preview_url()
+		if url then
+			vim.notify("Preview URL: " .. url, vim.log.levels.INFO)
+			-- Also copy to clipboard if available
+			if vim.fn.has("clipboard") == 1 then
+				vim.fn.setreg("+", url)
+				vim.notify("URL copied to clipboard", vim.log.levels.INFO)
+			end
+		else
+			vim.notify("No preview opened for this buffer. Use :AbcPreview first.", vim.log.levels.WARN)
+		end
+	end, { desc = "Show and copy preview URL" })
+
+	vim.api.nvim_buf_create_user_command(bufnr, "AbcPreviewReopen", function()
+		require("abc_lsp.preview").reopen_preview()
+	end, { desc = "Reopen preview in browser" })
+
 	vim.api.nvim_buf_create_user_command(bufnr, "AbcExportHtml", function()
 		require("abc_lsp.export").export_html()
 	end, { desc = "Export ABC as HTML" })

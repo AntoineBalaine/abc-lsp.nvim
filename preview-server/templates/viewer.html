@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ABC Preview</title>
+    <title id="page-title">ABC Preview</title>
     <style>
         @import url(https://fonts.googleapis.com/css?family=Itim);
 
@@ -95,8 +95,13 @@
         // Connect to WebSocket server
         function connectWebSocket() {
             const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-            const wsUrl = `${protocol}//${window.location.host}`;
-            
+            const pathname = window.location.pathname;
+            const wsUrl = `${protocol}//${window.location.host}${pathname}`;
+
+            // Update page title with score name
+            const scoreName = pathname.substring(1) || "untitled";
+            document.getElementById('page-title').textContent = `ABC Preview - ${decodeURIComponent(scoreName)}`;
+
             ws = new WebSocket(wsUrl);
             
             ws.onopen = function() {

@@ -10,9 +10,88 @@ M.server_job_id = nil
 ---@type number
 M.server_port = 8088
 
+-- Track previewed buffers: [bufnr] = {path, slug, opened}
+M.previewed_buffers = {}
+
+-- Counter for untitled files
+M.untitled_counter = 0
+
 --- Callback for processing stdout from the server
 ---@type function|nil
 M.stdout_callback = nil
+
+--- Generate URL-safe slug from file path
+---@param file_path string Absolute path to the file
+---@return string slug URL-safe slug
+local function generate_slug(file_path)
+	-- Get filename without path and extension
+	local basename = vim.fn.fnamemodify(file_path, ":t:r")
+
+	-- Handle unnamed buffers
+	if basename == "" or basename == "untitled" then
+		M.untitled_counter = M.untitled_counter + 1
+		return "untitled-" .. M.untitled_counter
+	end
+
+	-- Replace spaces with dashes
+	local slug = basename:gsub("%s+", "-")
+
+	-- Check for collisions
+	local counter = 1
+	local original_slug = slug
+	local collision = false
+
+	for _, buf_info in pairs(M.previewed_buffers) do
+		if buf_info.slug == slug then
+			collision = true
+			break
+		end
+	end
+
+	if collision then
+		repeat
+			slug = original_slug .. "-" .. counter
+			counter = counter + 1
+			collision = false
+			for _, buf_info in pairs(M.previewed_buffers) do
+				if buf_info.slug == slug then
+					collision = true
+					break
+				end
+			end
+		until not collision
+	end
+
+	return slug
+end
+
+--- Get or create buffer info
+---@param bufnr number Buffer number
+---@return table Buffer info {path, slug, opened}
+local function get_buffer_info(bufnr)
+	if M.previewed_buffers[bufnr] then
+		return M.previewed_buffers[bufnr]
+	end
+
+	-- Create new buffer info
+	local path = vim.api.nvim_buf_get_name(bufnr)
+
+	-- Handle unnamed buffers
+	if path == "" then
+		path = "[No Name]"
+	end
+
+	local slug = generate_slug(path)
+
+	local info = {
+		path = path,
+		slug = slug,
+		opened = false,
+	}
+
+	M.previewed_buffers[bufnr] = info
+	return info
+end
 
 --- Start the preview server
 ---@return number|nil Port number if server started successfully, nil otherwise
@@ -26,13 +105,9 @@ function M.start_server()
 	local server_path
 
 	-- First try: Use debug.getinfo to find the plugin path
-	local source = debug.getinfo(1, "S").source:sub(2)      -- Remove the '@' prefix
+	local source = debug.getinfo(1, "S").source:sub(2) -- Remove the '@' prefix
 	local plugin_path = vim.fn.fnamemodify(source, ":h:h:h") -- Go up 3 levels from lua/abc_lsp/preview.lua
 	local primary_path = plugin_path .. "/preview-server/dist/server.js"
-
-	-- Debug output
-	print("Plugin path: " .. plugin_path)
-	print("Primary server path: " .. primary_path)
 
 	if vim.fn.filereadable(primary_path) == 1 then
 		server_path = primary_path
@@ -49,7 +124,6 @@ function M.start_server()
 			local expanded_paths = vim.fn.glob(path_pattern, false, true)
 			if #expanded_paths > 0 then
 				server_path = expanded_paths[1]
-				print("Found server at fallback path: " .. server_path)
 				break
 			end
 		end
@@ -65,12 +139,18 @@ function M.start_server()
 	M.server_job_id = vim.fn.jobstart("node " .. server_path .. " --port=" .. M.server_port, {
 		on_stdout = function(_, data)
 			if data and #data > 0 then
-				-- Process server output (click events, etc.)
+				-- Process server output
 				for _, line in ipairs(data) do
 					if line and line ~= "" then
 						local success, message = pcall(vim.fn.json_decode, line)
-						if success and message.type == "click" then
-							M.handle_click(message)
+						if success then
+							if message.type == "serverInfo" then
+								-- Server reported actual port
+								M.server_port = message.port
+								vim.notify("ABC Preview Server started on port " .. M.server_port, vim.log.levels.INFO)
+							elseif message.type == "click" then
+								M.handle_click(message)
+							end
 						end
 					end
 				end
@@ -102,7 +182,6 @@ function M.start_server()
 		return nil
 	end
 
-	vim.notify("ABC Preview Server started on port " .. M.server_port, vim.log.levels.INFO)
 	return M.server_port
 end
 
@@ -115,15 +194,17 @@ function M.stop_server()
 end
 
 --- Send content to the server
+---@param path string Absolute file path
 ---@param content string ABC notation content
 ---@return boolean Success status
-function M.send_content(content)
+function M.send_content(path, content)
 	if not M.server_job_id then
 		return false
 	end
 
 	local message = vim.fn.json_encode({
 		type = "content",
+		path = path,
 		content = content,
 	})
 
@@ -187,8 +268,32 @@ function M.byte_to_pos(bufnr, byte_pos)
 	return #lines - 1, #lines[#lines]
 end
 
+--- Get preview URL for a buffer
+---@param bufnr number|nil Buffer number (defaults to current buffer)
+---@return string|nil URL or nil if not previewed
+function M.get_preview_url(bufnr)
+	bufnr = bufnr or vim.api.nvim_get_current_buf()
+
+	if not M.server_job_id then
+		return nil
+	end
+
+	local info = M.previewed_buffers[bufnr]
+	if not info then
+		return nil
+	end
+
+	return "http://localhost:" .. M.server_port .. "/" .. info.slug
+end
+
 --- Open preview in browser
-function M.open_preview()
+---@param bufnr number|nil Buffer number (defaults to current buffer)
+function M.open_preview(bufnr)
+	bufnr = bufnr or vim.api.nvim_get_current_buf()
+
+	-- Get or create buffer info
+	local info = get_buffer_info(bufnr)
+
 	-- Start server if not running
 	local port = M.start_server()
 	if not port then
@@ -196,18 +301,53 @@ function M.open_preview()
 	end
 
 	-- Get current buffer content
-	local bufnr = vim.api.nvim_get_current_buf()
 	local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
 
 	-- Send content to server
-	M.send_content(content)
+	M.send_content(info.path, content)
 
 	-- Send configuration
 	local options = config.options.preview or {}
 	M.send_config(options)
 
-	-- Open browser
-	local url = "http://localhost:" .. port
+	-- Only open browser if not already opened
+	if not info.opened then
+		local url = "http://localhost:" .. port .. "/" .. info.slug
+		local cmd
+
+		if vim.fn.has("mac") == 1 then
+			cmd = "open"
+		elseif vim.fn.has("unix") == 1 then
+			cmd = "xdg-open"
+		elseif vim.fn.has("win32") == 1 then
+			cmd = "start"
+		end
+
+		if cmd then
+			vim.fn.jobstart(cmd .. " " .. url, { detach = true })
+			info.opened = true
+		else
+			vim.notify("Unable to open browser automatically. Please open: " .. url, vim.log.levels.INFO)
+		end
+	end
+end
+
+--- Reopen preview in browser for current buffer
+function M.reopen_preview()
+	local bufnr = vim.api.nvim_get_current_buf()
+	local info = M.previewed_buffers[bufnr]
+
+	if not info then
+		vim.notify("No preview opened for this buffer. Use :AbcPreview first.", vim.log.levels.WARN)
+		return
+	end
+
+	if not M.server_job_id then
+		vim.notify("Preview server not running. Use :AbcPreview first.", vim.log.levels.WARN)
+		return
+	end
+
+	local url = "http://localhost:" .. M.server_port .. "/" .. info.slug
 	local cmd
 
 	if vim.fn.has("mac") == 1 then
@@ -228,9 +368,36 @@ end
 --- Update preview with current buffer content
 function M.update_preview()
 	local bufnr = vim.api.nvim_get_current_buf()
-	local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+	local info = M.previewed_buffers[bufnr]
 
-	M.send_content(content)
+	-- Only update if this buffer has been previewed
+	if not info then
+		return
+	end
+
+	local content = table.concat(vim.api.nvim_buf_get_lines(bufnr, 0, -1, false), "\n")
+	M.send_content(info.path, content)
+end
+
+--- Clean up buffer from server
+---@param bufnr number Buffer number
+function M.cleanup_buffer(bufnr)
+	local info = M.previewed_buffers[bufnr]
+
+	if not info then
+		return
+	end
+
+	if M.server_job_id then
+		local message = vim.fn.json_encode({
+			type = "cleanup",
+			path = info.path,
+		})
+		vim.fn.chansend(M.server_job_id, message .. "\n")
+	end
+
+	-- Remove from tracking
+	M.previewed_buffers[bufnr] = nil
 end
 
 --- Send cursor position to the server
@@ -242,7 +409,7 @@ function M.send_cursor_position()
 
 	local bufnr = vim.api.nvim_get_current_buf()
 	local cursor = vim.api.nvim_win_get_cursor(0) -- Returns {row, col}
-	local line = cursor[1] - 1                   -- Convert to 0-indexed
+	local line = cursor[1] - 1 -- Convert to 0-indexed
 	local col = cursor[2]
 
 	-- Calculate character position
@@ -250,7 +417,7 @@ function M.send_cursor_position()
 
 	local message = vim.fn.json_encode({
 		type = "cursorMove",
-		position = char_pos
+		position = char_pos,
 	})
 
 	vim.fn.chansend(M.server_job_id, message .. "\n")
@@ -282,6 +449,15 @@ function M.setup_autocommands()
 			M.cursor_timer = vim.fn.timer_start(100, function()
 				M.send_cursor_position()
 			end)
+		end,
+	})
+
+	-- Clean up on buffer delete
+	vim.api.nvim_create_autocmd("BufDelete", {
+		group = augroup,
+		pattern = "*.abc",
+		callback = function(args)
+			M.cleanup_buffer(args.buf)
 		end,
 	})
 
