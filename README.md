@@ -23,10 +23,9 @@ A Neovim plugin for ABC music notation that provides language server features.
 
 ## Requirements
 
-- Neovim >= 0.7.0
-- Node.js (for running the language server and preview server)
-- npm (for installing dependencies)
-- [nvim-lspconfig](https://github.com/neovim/nvim-lspconfig)
+- Neovim >= 0.7.0 (for built-in LSP support)
+- Node.js and npm (for language server and preview server)
+- [abc-lsp-server](https://github.com/AntoineBalaine/abc-lsp-server) (installed separately)
 - [abc-parser](https://github.com/AntoineBalaine/abc_parse) (installed as a dependency of the server)
 
 ## Installation
@@ -36,12 +35,11 @@ A Neovim plugin for ABC music notation that provides language server features.
 ```lua
 use {
   'AntoineBalaine/abc-lsp.nvim',
-  requires = {
-    'neovim/nvim-lspconfig',
-  },
-  run = function() require('abc_lsp.install').install() end,
+  run = 'cd preview-server && npm install && npm run build',
   config = function()
-    require('abc_lsp').setup()
+    require('abc_lsp').setup({
+      lsp_path = '/path/to/abc-lsp-server/out/server.js'
+    })
   end
 }
 ```
@@ -51,12 +49,11 @@ use {
 ```lua
 {
   'AntoineBalaine/abc-lsp.nvim',
-  dependencies = {
-    'neovim/nvim-lspconfig',
-  },
-  build = function() require('abc_lsp.install').install() end,
+  build = 'cd preview-server && npm install && npm run build',
   config = function()
-    require('abc_lsp').setup()
+    require('abc_lsp').setup({
+      lsp_path = '/path/to/abc-lsp-server/out/server.js'
+    })
   end
 }
 ```
@@ -84,24 +81,22 @@ npm link
 
 ### Preview Server
 
-The preview server is included with the plugin and its dependencies will be installed automatically when:
+The preview server is included with the plugin and builds automatically when you install or update the plugin (via the `run`/`build` hook shown in installation examples).
 
-1. The plugin is first loaded (you'll be prompted to install dependencies)
-2. You use a plugin manager with the `run`/`build` option as shown in the installation examples
+**Requirements:** Node.js and npm must be installed.
 
-#### Manual Installation
+#### Manual Rebuild
 
-If you prefer to install the preview server dependencies manually:
+If you need to rebuild the preview server:
 
+- **lazy.nvim**: `:Lazy build abc-lsp.nvim`
+- **packer**: Re-run `:PackerSync`
+- **Or use**: `:AbcInstall` command
+
+For manual build from command line:
 ```bash
-# Navigate to the plugin directory (adjust path as needed for your plugin manager)
 cd ~/.local/share/nvim/site/pack/packer/start/abc-lsp.nvim/preview-server
-
-# Install dependencies
-npm install --production
-
-# Build the TypeScript code
-npm run build
+npm install && npm run build
 ```
 
 ## Configuration
@@ -158,22 +153,39 @@ require('abc_lsp').setup({
 
 ## Commands
 
-The plugin provides the following commands:
+All commands are accessed via the `:Abc` command with subcommands. Use `:Abc` with no arguments to see all available commands with descriptions.
 
-- `:AbcLspStart` - Start the ABC LSP server
-- `:AbcLspStop` - Stop the ABC LSP server
-- `:AbcLspRestart` - Restart the ABC LSP server
+Tab completion is available: type `:Abc <Tab>` to see all subcommands.
 
-When editing an ABC file, the following buffer-local commands are available:
+### Rhythm & Transposition
 
-- `:AbcDivideRhythm` - Divide rhythm in selection
-- `:AbcMultiplyRhythm` - Multiply rhythm in selection
-- `:AbcTransposeUp` - Transpose selection up an octave
-- `:AbcTransposeDown` - Transpose selection down an octave
-- `:AbcPreview` - Open ABC preview in browser
-- `:AbcExportHtml` - Export ABC as HTML
-- `:AbcExportSvg` - Export ABC as SVG
-- `:AbcPrintPreview` - Open print preview
+- `:Abc rhythm_divide` - Divide rhythm in selection
+- `:Abc rhythm_multiply` - Multiply rhythm in selection
+- `:Abc transpose_up` - Transpose selection up an octave
+- `:Abc transpose_down` - Transpose selection down an octave
+
+### Preview
+
+- `:Abc preview_open` - Open ABC preview in browser
+- `:Abc preview_url` - Show and copy preview URL to clipboard
+- `:Abc preview_reopen` - Reopen preview in browser
+- `:Abc preview_stop` - Stop preview server
+
+### Export
+
+- `:Abc export_html` - Export as HTML
+- `:Abc export_svg` - Export as SVG
+- `:Abc print_preview` - Open print preview
+
+### Server
+
+- `:Abc server_start` - Start ABC LSP server
+- `:Abc server_stop` - Stop ABC LSP server
+- `:Abc server_restart` - Restart ABC LSP server
+
+### Maintenance
+
+- `:Abc install` - Install/rebuild preview server
 
 ## Keymaps
 

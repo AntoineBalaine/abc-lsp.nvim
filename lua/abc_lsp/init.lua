@@ -110,4 +110,9 @@ function M.print_preview()
 	abc_export.print_preview()
 end
 
+--- Install/rebuild preview server
+function M.install()
+	abc_install.install()
+end
+
 return M

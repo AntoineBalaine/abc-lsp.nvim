@@ -120,25 +120,16 @@ function M.build_typescript()
   return true
 end
 
--- Run the full installation process
+-- Check if build exists on startup
 function M.run()
-  if not M.check_dependencies() then
-    local choice = vim.fn.confirm(
-      "ABC preview server dependencies not found. Install now?",
-      "&Yes\n&No", 1
-    )
+  local plugin_root = M.get_plugin_root()
+  local server_js = plugin_root .. "/preview-server/dist/server.js"
 
-    if choice == 1 then
-      if M.install_dependencies() then
-        M.build_typescript()
-      end
-    else
-      vim.notify(
-        "Dependencies not installed. Preview functionality will not work. " ..
-        "See README for manual installation instructions.",
-        vim.log.levels.WARN
-      )
-    end
+  if vim.fn.filereadable(server_js) ~= 1 then
+    vim.notify(
+      "ABC Preview Server not built. Please reinstall the plugin with your plugin manager.",
+      vim.log.levels.ERROR
+    )
   end
 end
 
