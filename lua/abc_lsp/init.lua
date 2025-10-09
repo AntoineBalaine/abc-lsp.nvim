@@ -14,7 +14,6 @@ local abc_install = require("abc_lsp.install")
 ---@param opts table|nil Configuration options
 function M.setup(opts)
 	vim.lsp.set_log_level("debug")
-	vim.notify("ABC init", vim.log.levels.INFO)
 	-- Merge user options with defaults
 	opts = vim.tbl_deep_extend("force", abc_cfg.defaults, opts or {})
 
@@ -42,7 +41,6 @@ function M.create_autocommands()
 		group = augroup,
 		pattern = "*.abc",
 		callback = function()
-			vim.notify("ABC Autocmd", vim.log.levels.INFO)
 			-- Start the server if not already running
 			if not abc_srvr.is_running() then
 				abc_srvr.start()

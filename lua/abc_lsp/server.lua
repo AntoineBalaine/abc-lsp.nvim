@@ -22,7 +22,7 @@ function abc_srvr.start()
 	local opts = abc_cfg.options
 
 	if abc_srvr.is_running() then
-		-- return
+		return
 	end
 
 	-- Check if LSP path is provided
