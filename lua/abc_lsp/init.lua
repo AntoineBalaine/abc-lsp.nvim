@@ -39,7 +39,7 @@ function M.create_autocommands()
 	-- Attach to ABC files
 	vim.api.nvim_create_autocmd("BufEnter", {
 		group = augroup,
-		pattern = "*.abc",
+		pattern = { "*.abc", "*.abcx" },
 		callback = function()
 			-- Start the server if not already running
 			if not abc_srvr.is_running() then

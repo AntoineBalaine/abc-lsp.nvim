@@ -20,6 +20,7 @@ A Neovim plugin for ABC music notation that provides language server features.
 - Live preview of ABC notation in a browser
 - Interactive cursor-based note highlighting in preview
 - Export to HTML and SVG formats
+- ABCx chord sheet support (automatic conversion to ABC for rendering)
 
 ## Requirements
 
@@ -98,6 +99,22 @@ For manual build from command line:
 cd ~/.local/share/nvim/site/pack/packer/start/abc-lsp.nvim/preview-server
 npm install && npm run build
 ```
+
+#### Building with ABCx Support
+
+The preview server imports the abc-parser library for ABCx chord sheet conversion. If you are developing locally or need ABCx support, ensure abc_parse is built first:
+
+```bash
+# Build abc_parse (required dependency for ABCx conversion)
+cd /path/to/abc_parse
+npm run build:parse
+
+# Then build the preview server
+cd /path/to/abc-lsp.nvim/preview-server
+npm install && npm run build
+```
+
+The preview server expects the abc_parse output at `../../abc_parse/out/parse/` relative to the preview-server directory.
 
 ## Configuration
 

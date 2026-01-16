@@ -4,6 +4,25 @@ import http from "http";
 import path from "path";
 import WebSocket from "ws";
 import { ClientMessage, ServerMessage } from "./types";
+import { ABCContext, convertAbcxToAbc } from "../../../abc_parse/out/parse/index";
+
+// ABCx file detection and conversion
+function isAbcxFile(filePath: string): boolean {
+  return filePath.endsWith(".abcx");
+}
+
+function processContent(filePath: string, content: string): string {
+  if (isAbcxFile(filePath)) {
+    try {
+      const ctx = new ABCContext();
+      return convertAbcxToAbc(content, ctx);
+    } catch (error) {
+      console.error("ABCx conversion error:", error);
+      return content; // Return original on error
+    }
+  }
+  return content;
+}
 
 // Parse command line arguments
 const args = process.argv.slice(2);
@@ -36,8 +55,13 @@ async function findAvailablePort(start: number, maxTries: number = 10): Promise<
 
 // Generate URL-safe slug from file path
 function generateSlug(filePath: string, existingSlugs: Set<string>): string {
-  // Get filename without extension
-  let basename = path.basename(filePath, ".abc");
+  // Get filename and remove .abcx or .abc extension
+  let basename = path.basename(filePath);
+  if (basename.endsWith(".abcx")) {
+    basename = basename.slice(0, -5);
+  } else if (basename.endsWith(".abc")) {
+    basename = basename.slice(0, -4);
+  }
 
   // Handle untitled files
   if (!basename || basename === "untitled" || basename === "") {
@@ -253,6 +277,9 @@ findAvailablePort(startPort).then((port) => {
           return;
         }
 
+        // Convert ABCx to ABC if needed
+        const processedContent = processContent(filePath, contentMsg.content);
+
         // Get or create score data
         let scoreData = scoresByPath.get(filePath);
 
@@ -262,7 +289,7 @@ findAvailablePort(startPort).then((port) => {
           const slug = generateSlug(filePath, existingSlugs);
 
           scoreData = {
-            content: contentMsg.content,
+            content: processedContent,
             slug: slug,
             clients: new Set()
           };
@@ -273,7 +300,7 @@ findAvailablePort(startPort).then((port) => {
           console.log(`Created new score: ${filePath} -> ${slug}`);
         } else {
           // Update existing score content
-          scoreData.content = contentMsg.content;
+          scoreData.content = processedContent;
         }
 
         // Broadcast to all clients for this score
@@ -281,7 +308,7 @@ findAvailablePort(startPort).then((port) => {
           if (client.readyState === WebSocket.OPEN) {
             client.send(JSON.stringify({
               type: "content",
-              content: contentMsg.content
+              content: processedContent
             }));
           }
         });

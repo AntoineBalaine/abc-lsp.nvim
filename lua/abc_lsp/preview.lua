@@ -431,7 +431,7 @@ function M.setup_autocommands()
 	-- Update preview on buffer change
 	vim.api.nvim_create_autocmd({ "TextChanged", "TextChangedI" }, {
 		group = augroup,
-		pattern = "*.abc",
+		pattern = { "*.abc", "*.abcx" },
 		callback = function()
 			M.update_preview()
 		end,
@@ -440,7 +440,7 @@ function M.setup_autocommands()
 	-- Track cursor movement
 	vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
 		group = augroup,
-		pattern = "*.abc",
+		pattern = { "*.abc", "*.abcx" },
 		callback = function()
 			-- Debounce to avoid too many updates
 			if M.cursor_timer then
@@ -455,7 +455,7 @@ function M.setup_autocommands()
 	-- Clean up on buffer delete
 	vim.api.nvim_create_autocmd("BufDelete", {
 		group = augroup,
-		pattern = "*.abc",
+		pattern = { "*.abc", "*.abcx" },
 		callback = function(args)
 			M.cleanup_buffer(args.buf)
 		end,
